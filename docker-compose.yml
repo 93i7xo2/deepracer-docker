@@ -1,0 +1,38 @@
+version: '3.7'
+
+networks:
+  default:
+    external:
+      name: sagemaker-local-1
+
+services:
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+    command: server /data
+    volumes:
+      - ./data/minio:/data
+    restart: unless-stopped
+    env_file: config.env
+  rl_coach:
+    image: ending2015a/dr-coach:latest
+    env_file: config.env
+    volumes:
+    - '//var/run/docker.sock:/var/run/docker.sock'
+    - './src/rl_coach_2020_v2:/deepracer/rl_coach'
+    - '/robo/container:/robo/container'
+    depends_on:
+    - minio
+  robomaker:
+    image: awsdeepracercommunity/deepracer-robomaker:cpu
+    command: ["${ROBOMAKER_COMMAND}"]
+    volumes:
+      - ./data/robomaker:/root/.ros/
+    ports:
+      - "8013:5900"
+      - "8014:8080" 
+    restart: unless-stopped
+    env_file: config.env
+    depends_on:
+    - rl_coach
